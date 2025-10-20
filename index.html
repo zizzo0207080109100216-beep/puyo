@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AED Puzzle Game</title>
+<style>
+  body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-family: 'Arial', sans-serif;
+    color: white;
+    margin: 0;
+    padding: 10px;
+    box-sizing: border-box;
+  }
+  #game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 600px;
+    width: 100%;
+  }
+  #menu-screen {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    padding: 40px;
+    text-align: center;
+    background: rgba(255,255,255,0.15);
+    border-radius: 20px;
+    backdrop-filter: blur(15px);
+    border: 2px solid rgba(255,255,255,0.3);
+  }
+  #menu-screen h1 {
+    font-size: 3rem;
+    margin: 0;
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.7);
+  }
+  #menu-screen p {
+    font-size: 1.2rem;
+    margin: 10px 0;
+    line-height: 1.8;
+  }
+  #game-screen {
+    display: none;
+    width: 100%;
+  }
+  .menu-button {
+    padding: 18px 35px;
+    font-size: 1.4rem;
+    cursor: pointer;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    transition: all 0.3s;
+    box-shadow: 0 5px 20px rgba(245,87,108,0.5);
+    font-weight: bold;
+  }
+  .menu-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(245,87,108,0.7);
+  }
+  #hud {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    padding: 20px;
+    background: rgba(0,0,0,0.8);
+    border-radius: 15px;
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+  .hud-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+  .hud-label {
+    font-size: 0.9rem;
+    color: #aaa;
+  }
+  #game-canvas {
+    border: 4px solid #f5576c;
+    border-radius: 15px;
+    background: #1a1a2e;
+    box-shadow: 0 0 40px rgba(245,87,108,0.4);
+  }
+  #controls {
+    margin-top: 20px;
+    text-align: center;
+    font-size: 1.1rem;
+    background: rgba(0,0,0,0.6);
+    padding: 15px 25px;
+    border-radius: 10px;
+  }
+  #touch-controls {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    gap: 15px;
+    z-index: 100;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  #touch-controls.active {
+    display: flex;
+  }
+  .touch-button {
+    width: 70px;
+    height: 70px;
+    background: rgba(245,87,108,0.8);
+    border: 3px solid white;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    color: white;
+    user-select: none;
+    touch-action: none;
+    font-weight: bold;
+  }
+  .touch-button:active {
+    background: rgba(245,87,108,1);
+    transform: scale(0.95);
+  }
+  #game-over {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.95);
+    padding: 50px;
+    border-radius: 20px;
+    text-align: center;
+    border: 4px solid #f5576c;
+    z-index: 1000;
+  }
+  #game-over h2 {
+    font-size: 3rem;
+    margin: 0 0 25px 0;
+    color: #f5576c;
+  }
+  #game-over p {
+    font-size: 1.5rem;
+    margin: 15px 0;
+  }
+  @media (max-width: 600px) {
+    #game-canvas {
+      width: 100% !important;
+      height: auto !important;
+    }
+  }
+</style>
+</head>
+  
+<body>
+<div id="game-container">
+  <div id="menu-screen">
+    <h1>🧩 AED ぷよぷよ風
+      🧩</h1>
+    <p>同じ色のAEDを3つ以上揃えて消そう！</p>
+    <p><strong>操作：</strong> ← → 移動 | ↓ 高速落下 | スペース/↑ 回転</p>
+    <button class="menu-button" onclick="startGame()">ゲームスタート</button>
+  </div>
+
+  <div id="game-screen">
+    <div id="hud">
+      <div class="hud-item"><div class="hud-label">スコア</div><div><span id="score">0</span></div></div>
+      <div class="hud-item"><div class="hud-label">レベル</div><div><span id="level">1</span></div></div>
+      <div class="hud-item"><div class="hud-label">連鎖</div><div><span id="chains">0</span></div></div>
+    </div>
+    
+    <canvas id="game-canvas" width="400" height="600"></canvas>
+    
+    <div id="controls">⬅️ ➡️ 移動 | ⬇️ 高速落下 | ↑ スペース 回転</div>
+    
+    <div id="touch-controls">
+      <div class="touch-button" id="btn-left">⬅️</div>
+      <div class="touch-button" id="btn-rotate">🔄</div>
+      <div class="touch-button" id="btn-right">➡️</div>
+      <div class="touch-button" id="btn-down">⬇️</div>
+    </div>
+    
+    <div id="game-over">
+      <h2>ゲームオーバー！</h2>
+      <p>スコア: <span id="final-score">0</span></p>
+      <p>レベル: <span id="final-level">1</span></p>
+      <button class="menu-button" onclick="location.reload()">もう一度</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+const COLS = 8, ROWS = 12, SIZE = 50;
+let board, score, level, chains, running, piece, nextPiece, dropTime, lastTime, chainCount;
+let pressedKeys = new Set();
+
+function drawAED(color, x, y) {
+  const isSquare = ['red','blue','green'].includes(color);
+  const colors = {red:'#ff0000',blue:'#3399ff',white:'#f0f0f0',yellow:'#ffd700',green:'#22c55e'};
+  
+  ctx.save();
+  if (isSquare) {
+    ctx.fillStyle = colors[color];
+    ctx.fillRect(x+5, y+5, SIZE-10, SIZE-10);
+    ctx.strokeStyle = color === 'red' ? '#cc0000' : color === 'blue' ? '#0066cc' : '#16a34a';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x+5, y+5, SIZE-10, SIZE-10);
+  } else {
+    ctx.beginPath();
+    ctx.arc(x+SIZE/2, y+SIZE/2, SIZE/2.5, 0, Math.PI*2);
+    ctx.fillStyle = colors[color];
+    ctx.fill();
+    ctx.strokeStyle = color === 'white' ? '#ccc' : '#daa520';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+  ctx.fillStyle = isSquare ? 'white' : '#333';
+  ctx.font = 'bold 14px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('AED', x+SIZE/2, y+SIZE/2);
+  ctx.restore();
+}
+
+class Puyo {
+  constructor() {
+    this.ax = Math.floor(COLS/2);
+    this.ay = 0;
+    this.dx = 0;
+    this.dy = -1;
+    const types = ['red','blue','white','yellow','green'];
+    this.ac = types[Math.floor(Math.random()*types.length)];
+    this.cc = types[Math.floor(Math.random()*types.length)];
+  }
+  
+  rotate() {
+    let new_dx = -this.dy;
+    let new_dy = this.dx;
+    let new_ax = this.ax;
+    let new_ay = this.ay;
+    let new_cx = new_ax + new_dx;
+    let new_cy = new_ay + new_dy;
+    
+    // 1. 回転後の子ぷよの位置をチェック
+    if (new_cx < 0) {
+      new_ax += 1;
+      new_cx += 1;
+    } else if (new_cx >= COLS) {
+      new_ax -= 1;
+      new_cx -= 1;
+    }
+    
+    // 2. 移動後の位置でブロックや床に衝突しないか最終チェック
+    if (new_ax < 0 || new_ax >= COLS) return;
+    if (new_cy >= ROWS) return;
+    
+    // 3. ブロックとの衝突チェック
+    if (new_cy >= 0 && board[new_cy][new_cx]) return;
+    if (new_ay >= 0 && board[new_ay][new_ax]) return;
+    
+    // すべてクリアしたら回転を適用
+    this.ax = new_ax;
+    this.ay = new_ay;
+    this.dx = new_dx;
+    this.dy = new_dy;
+  }
+  
+  canMove(dx, dy) {
+    const nax = this.ax + dx;
+    const nay = this.ay + dy;
+    const ncx = nax + this.dx;
+    const ncy = nay + this.dy;
+    
+    if (nax < 0 || nax >= COLS || nay >= ROWS) return false;
+    if (ncx < 0 || ncx >= COLS || ncy >= ROWS) return false;
+    if (board[nay][nax]) return false;
+    if (ncy >= 0 && board[ncy][ncx]) return false;
+    return true;
+  }
+  
+  move(dx, dy) {
+    this.ax += dx;
+    this.ay += dy;
+  }
+  
+  lock() {
+    if (this.ay >= 0 && this.ay < ROWS && this.ax >= 0 && this.ax < COLS) {
+      board[this.ay][this.ax] = this.ac;
+    }
+    
+    const cy = this.ay + this.dy;
+    const cx = this.ax + this.dx;
+    
+    if (cy >= 0 && cy < ROWS && cx >= 0 && cx < COLS) {
+      let finalY = cy;
+      while (finalY + 1 < ROWS && board[finalY + 1][cx] === null) {
+        finalY++;
+      }
+      board[finalY][cx] = this.cc;
+    }
+  }
+  
+  draw() {
+    drawAED(this.ac, this.ax * SIZE, this.ay * SIZE);
+    const cy = this.ay + this.dy;
+    if (cy >= 0) drawAED(this.cc, (this.ax + this.dx) * SIZE, cy * SIZE);
+  }
+}
+
+function init() {
+  board = Array(ROWS).fill().map(() => Array(COLS).fill(null));
+  score = 0;
+  level = 1;
+  chains = 0;
+  chainCount = 0;
+  running = true;
+  nextPiece = new Puyo();
+  piece = new Puyo();
+  dropTime = 0;
+  lastTime = Date.now();
+  updateHUD();
+}
+
+function drawBoard() {
+  ctx.fillStyle = '#0f0f1e';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  ctx.strokeStyle = '#2a2a3e';
+  for (let i = 0; i <= ROWS; i++) {
+    ctx.beginPath();
+    ctx.moveTo(0, i*SIZE);
+    ctx.lineTo(COLS*SIZE, i*SIZE);
+    ctx.stroke();
+  }
+  for (let i = 0; i <= COLS; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i*SIZE, 0);
+    ctx.lineTo(i*SIZE, ROWS*SIZE);
+    ctx.stroke();
+  }
+  
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (board[y][x]) drawAED(board[y][x], x*SIZE, y*SIZE);
+    }
+  }
+  
+  if (nextPiece) {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(COLS*SIZE - 110, 10, 100, 100);
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText('NEXT', COLS*SIZE - 85, 30);
+    
+    const nx = COLS*SIZE - 85;
+    const ny = 50;
+    drawAED(nextPiece.ac, nx, ny);
+    const ncy = ny + nextPiece.dy * 25;
+    const ncx = nx + nextPiece.dx * 25;
+    drawAED(nextPiece.cc, ncx, ncy);
+  }
+  
+  if (chainCount > 1) {
+    ctx.fillStyle = 'rgba(255,215,0,0.8)';
+    ctx.font = 'bold 30px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${chainCount} 連鎖！`, COLS*SIZE/2, ROWS*SIZE/2);
+  }
+}
+
+function checkMatch() {
+  const toRemove = new Set();
+  const visited = new Set();
+  
+  function floodFill(x, y, color, group) {
+    const key = `${y},${x}`;
+    if (visited.has(key)) return;
+    if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return;
+    if (board[y][x] !== color) return;
+    
+    visited.add(key);
+    group.push({x, y});
+    
+    floodFill(x+1, y, color, group);
+    floodFill(x-1, y, color, group);
+    floodFill(x, y+1, color, group);
+    floodFill(x, y-1, color, group);
+  }
+  
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (board[y][x] && !visited.has(`${y},${x}`)) {
+        const group = [];
+        floodFill(x, y, board[y][x], group);
+        
+        if (group.length >= 3) {
+          group.forEach(pos => toRemove.add(`${pos.y},${pos.x}`));
+        }
+      }
+    }
+  }
+  
+  if (toRemove.size > 0) {
+    toRemove.forEach(k => {
+      const [y,x] = k.split(',').map(Number);
+      board[y][x] = null;
+    });
+    
+    chainCount++;
+    score += toRemove.size * 10 * chainCount * level;
+    chains++;
+    level = Math.floor(chains / 5) + 1;
+    updateHUD();
+    
+    setTimeout(() => {
+      gravity();
+      setTimeout(checkMatch, 200);
+    }, 200);
+    
+    return true;
+  }
+  return false;
+}
+
+function gravity() {
+  let moved = true;
+  let iterations = 0;
+  const maxIterations = 20;
+  
+  while (moved && iterations < maxIterations) {
+    moved = false;
+    iterations++;
+    
+    for (let y = ROWS - 2; y >= 0; y--) {
+      for (let x = 0; x < COLS; x++) {
+        if (board[y][x] !== null && board[y + 1][x] === null) {
+          board[y + 1][x] = board[y][x];
+          board[y][x] = null;
+          moved = true;
+        }
+      }
+    }
+  }
+}
+
+function updateHUD() {
+  document.getElementById('score').textContent = score;
+  document.getElementById('level').textContent = level;
+  document.getElementById('chains').textContent = chains;
+}
+
+function gameOver() {
+  running = false;
+  document.getElementById('final-score').textContent = score;
+  document.getElementById('final-level').textContent = level;
+  document.getElementById('game-over').style.display = 'block';
+}
+
+let moveLeftTime = 0, moveRightTime = 0, rotateTime = 0;
+
+function loop() {
+  if (!running) return;
+  
+  const now = Date.now();
+  const dt = now - lastTime;
+  lastTime = now;
+  
+  drawBoard();
+  
+  if (piece) {
+    const speed = pressedKeys.has('ArrowDown') ? 50 : 500;
+    dropTime += dt;
+    
+    if (dropTime > speed) {
+      if (piece.canMove(0, 1)) {
+        piece.move(0, 1);
+      } else {
+        piece.lock();
+        chainCount = 0;
+        const matched = checkMatch();
+        if (!matched) chainCount = 0;
+        if (board[0][Math.floor(COLS/2)]) {
+          gameOver();
+        } else {
+          piece = nextPiece;
+          nextPiece = new Puyo();
+        }
+      }
+      dropTime = 0;
+    }
+    
+    if (pressedKeys.has('ArrowLeft')) {
+      moveLeftTime += dt;
+      if (moveLeftTime > 150) {
+        if (piece.canMove(-1, 0)) piece.move(-1, 0);
+        moveLeftTime = 0;
+      }
+    } else {
+      moveLeftTime = 0;
+    }
+    
+    if (pressedKeys.has('ArrowRight')) {
+      moveRightTime += dt;
+      if (moveRightTime > 150) {
+        if (piece.canMove(1, 0)) piece.move(1, 0);
+        moveRightTime = 0;
+      }
+    } else {
+      moveRightTime = 0;
+    }
+    
+    piece.draw();
+  }
+  
+  requestAnimationFrame(loop);
+}
+
+document.addEventListener('keydown', e => {
+  if (!piece || !running) return;
+  
+  if (e.key === 'ArrowLeft' && !pressedKeys.has('ArrowLeft')) {
+    if (piece.canMove(-1, 0)) piece.move(-1, 0);
+  }
+  if (e.key === 'ArrowRight' && !pressedKeys.has('ArrowRight')) {
+    if (piece.canMove(1, 0)) piece.move(1, 0);
+  }
+  if ((e.key === ' ' || e.key === 'ArrowUp') && !pressedKeys.has(e.key)) {
+    piece.rotate();
+  }
+  
+  pressedKeys.add(e.key);
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+});
+
+document.addEventListener('keyup', e => {
+  pressedKeys.delete(e.key);
+});
+
+function setupTouch() {
+  const touch = document.getElementById('touch-controls');
+  if (/Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768) {
+    touch.classList.add('active');
+    document.getElementById('controls').style.display = 'none';
+  }
+  
+  let leftInterval, rightInterval;
+  
+  document.getElementById('btn-left').addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (piece && piece.canMove(-1, 0)) piece.move(-1, 0);
+    leftInterval = setInterval(() => {
+      if (piece && piece.canMove(-1, 0)) piece.move(-1, 0);
+    }, 100);
+  });
+  
+  document.getElementById('btn-left').addEventListener('touchend', e => {
+    e.preventDefault();
+    clearInterval(leftInterval);
+  });
+  
+  document.getElementById('btn-right').addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (piece && piece.canMove(1, 0)) piece.move(1, 0);
+    rightInterval = setInterval(() => {
+      if (piece && piece.canMove(1, 0)) piece.move(1, 0);
+    }, 100);
+  });
+  
+  document.getElementById('btn-right').addEventListener('touchend', e => {
+    e.preventDefault();
+    clearInterval(rightInterval);
+  });
+  
+  document.getElementById('btn-down').addEventListener('touchstart', e => {
+    e.preventDefault();
+    pressedKeys.add('ArrowDown');
+  });
+  
+  document.getElementById('btn-down').addEventListener('touchend', e => {
+    e.preventDefault();
+    pressedKeys.delete('ArrowDown');
+  });
+  
+  document.getElementById('btn-rotate').addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (piece) piece.rotate();
+  });
+}
+
+function startGame() {
+  document.getElementById('menu-screen').style.display = 'none';
+  document.getElementById('game-screen').style.display = 'block';
+  init();
+  setupTouch();
+  loop();
+}
+</script>
+</body>
+</html>
